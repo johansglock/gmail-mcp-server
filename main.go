@@ -1245,7 +1245,7 @@ func main() {
 			toneExists = "✅ Found"
 		}
 
-		statusMessage := fmt.Sprintf("📊 **Gmail MCP Server Status**\n\n📁 **App Data Directory:** %s\n\n🔑 **Token File:** %s\n   Status: %s\n\n📝 **Style Guide File:** %s\n   Status: %s\n\n🛠️ **Available Commands:**\n- Use /generate-email-tone to create email tone personalization\n- Use tools: search_threads (includes drafts), create_draft (create/update), extract_attachment_by_filename\n- Use resource: file://personal-email-style-guide", 
+		statusMessage := fmt.Sprintf("📊 **Gmail MCP Server Status**\n\n📁 **App Data Directory:** %s\n\n🔑 **Token File:** %s\n   Status: %s\n\n📝 **Style Guide File:** %s\n   Status: %s\n\n🛠️ **Available Tools:**\n- search_threads - Search Gmail (includes drafts)\n- create_draft - Create/update email drafts\n- extract_attachment_by_filename - Extract text from attachments (loads into context)\n- download_attachment - Download attachments to disk (no context usage)\n- fetch_email_bodies - Get full email content\n- get_personal_email_style_guide - Get writing style\n\n📚 **Resources:**\n- file://personal-email-style-guide - Your email writing style\n\n⚡ **Prompts:**\n- /generate-email-tone - Create personalized style guide\n- /server-status - Show this status",
 			getAppDataDir(), tokenPath, tokenExists, tonePath, toneExists)
 
 		return &mcp.GetPromptResult{
@@ -1416,7 +1416,7 @@ EXAMPLE QUERIES:
 
 	// Add Extract Attachment By Filename tool - more reliable than attachment ID
 	extractByFilenameTool := mcp.NewTool("extract_attachment_by_filename",
-		mcp.WithDescription("Safely extract text content from email attachments by filename (do not use attachment-id). Use search_threads first to find emails with attachments, then use this tool to extract readable text from specific files by name."),
+		mcp.WithDescription("Safely extract text content from email attachments by filename (do not use attachment-id). Supports PDF, DOCX, and TXT files. Loads content into context for analysis/reading. Use search_threads first to find emails with attachments, then use this tool to extract readable text from specific files by name. For large files or binary attachments (images, videos) that you want to save without loading into context, use download_attachment instead."),
 		mcp.WithString("message_id",
 			mcp.Required(),
 			mcp.Description("The Gmail message ID containing the attachment (from search_threads results)"),
@@ -1439,6 +1439,42 @@ EXAMPLE QUERIES:
 		}
 
 		return gmailServer.ExtractAttachmentByFilename(ctx, messageID, filename)
+	})
+
+	// Add Download Attachment To File tool - saves to disk without loading into context
+	downloadAttachmentTool := mcp.NewTool("download_attachment",
+		mcp.WithDescription("Download an email attachment directly to a local file path without loading it into the context window. Perfect for large files (images, videos, archives), binary attachments, or when you want to save files for later use without consuming context tokens. Returns only metadata (file path, size, MIME type, timestamp) instead of content. Use extract_attachment_by_filename instead if you need to read/analyze text content (PDF, DOCX, TXT)."),
+		mcp.WithString("message_id",
+			mcp.Required(),
+			mcp.Description("The Gmail message ID containing the attachment (from search_threads results)"),
+		),
+		mcp.WithString("filename",
+			mcp.Required(),
+			mcp.Description("The filename of the attachment to download (e.g., 'document.pdf', 'image.jpg')"),
+		),
+		mcp.WithString("local_path",
+			mcp.Required(),
+			mcp.Description("The local file path where the attachment should be saved (e.g., '/Users/john/Downloads/document.pdf')"),
+		),
+	)
+
+	mcpServer.AddTool(downloadAttachmentTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		messageID, err := req.RequireString("message_id")
+		if err != nil {
+			return mcp.NewToolResultError("message_id parameter is required and must be a string"), nil
+		}
+
+		filename, err := req.RequireString("filename")
+		if err != nil {
+			return mcp.NewToolResultError("filename parameter is required and must be a string"), nil
+		}
+
+		localPath, err := req.RequireString("local_path")
+		if err != nil {
+			return mcp.NewToolResultError("local_path parameter is required and must be a string"), nil
+		}
+
+		return gmailServer.DownloadAttachmentToFile(ctx, messageID, filename, localPath)
 	})
 
 	// Add Fetch Email Bodies tool for selective full content retrieval
@@ -1516,11 +1552,23 @@ EXAMPLE QUERIES:
 <p><em>Copy the above configuration to your Cursor MCP settings.</em></p>
 <h2>Available Tools:</h2>
 <ul>
-<li>search_threads - Search Gmail with powerful query syntax</li>
-<li>create_draft - Create/update email drafts</li>
-<li>extract_attachment_by_filename - Extract text from attachments</li>
-<li>fetch_email_bodies - Get full email content</li>
-<li>get_personal_email_style_guide - Get writing style guide</li>
+<li><strong>search_threads</strong> - Search Gmail with powerful query syntax (e.g., "from:sender@example.com", "has:attachment")</li>
+<li><strong>create_draft</strong> - Create/update email drafts with thread awareness</li>
+<li><strong>extract_attachment_by_filename</strong> - Extract text content from PDF/DOCX/TXT attachments (loads into context)</li>
+<li><strong>download_attachment</strong> - Download any attachment directly to local file path without loading into context
+  <ul style="margin-top: 5px; font-size: 0.9em;">
+    <li>Parameters: message_id, filename, local_path</li>
+    <li>Returns: metadata only (file path, size, MIME type)</li>
+    <li>Use for: large files, images, videos, binary files</li>
+    <li>Context efficient: doesn't consume tokens</li>
+  </ul>
+</li>
+<li><strong>fetch_email_bodies</strong> - Get full email content for specific threads</li>
+<li><strong>get_personal_email_style_guide</strong> - Get your personal email writing style guide</li>
+</ul>
+<h2>Resources:</h2>
+<ul>
+<li><strong>file://personal-email-style-guide</strong> - Your personal email writing style</li>
 </ul>
 </body>
 </html>`, port, port)
@@ -1664,6 +1712,88 @@ func (g *GmailServer) ExtractAttachmentByFilename(ctx context.Context, messageID
 		"extractedAt":  time.Now().Format(time.RFC3339),
 	}
 	
+	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(resultJSON)), nil
+}
+
+// DownloadAttachmentToFile downloads an attachment directly to a local file without loading it into context
+func (g *GmailServer) DownloadAttachmentToFile(ctx context.Context, messageID, filename, localPath string) (*mcp.CallToolResult, error) {
+	// Get the message to find attachments
+	message, err := g.service.Users.Messages.Get(g.userID, messageID).Do()
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get message: %v", err)), nil
+	}
+
+	// Find all attachments in the message
+	allAttachments := extractAttachmentInfo(message)
+
+	// Look for the attachment with matching filename
+	var targetAttachment map[string]interface{}
+	var attachmentPart *gmail.MessagePart
+
+	for _, attachment := range allAttachments {
+		if attachment["filename"] == filename {
+			targetAttachment = attachment
+			attachmentID := attachment["attachmentId"].(string)
+			findAttachmentPart(message.Payload.Parts, attachmentID, &attachmentPart)
+			break
+		}
+	}
+
+	if targetAttachment == nil {
+		availableFiles := make([]string, 0, len(allAttachments))
+		for _, att := range allAttachments {
+			availableFiles = append(availableFiles, att["filename"].(string))
+		}
+		return mcp.NewToolResultError(fmt.Sprintf("Attachment with filename '%s' not found. Available files: %v", filename, availableFiles)), nil
+	}
+
+	if attachmentPart == nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Could not find attachment part for filename '%s'", filename)), nil
+	}
+
+	// Get the attachment data using the current attachment ID
+	attachmentID := targetAttachment["attachmentId"].(string)
+	attachment, err := g.service.Users.Messages.Attachments.Get(g.userID, messageID, attachmentID).Do()
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get attachment data: %v", err)), nil
+	}
+
+	// Decode the attachment data
+	data, err := base64.URLEncoding.DecodeString(attachment.Data)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to decode attachment data: %v", err)), nil
+	}
+
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(localPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory %s: %v", dir, err)), nil
+	}
+
+	// Write the file to disk
+	if err := os.WriteFile(localPath, data, 0644); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to write file to %s: %v", localPath, err)), nil
+	}
+
+	// Get absolute path for the result
+	absPath, err := filepath.Abs(localPath)
+	if err != nil {
+		absPath = localPath
+	}
+
+	// Return metadata only (no content)
+	result := map[string]interface{}{
+		"messageId":    messageID,
+		"filename":     filename,
+		"attachmentId": attachmentID,
+		"mimeType":     attachmentPart.MimeType,
+		"savedTo":      absPath,
+		"fileSize":     len(data),
+		"downloadedAt": time.Now().Format(time.RFC3339),
+		"success":      true,
+	}
+
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }

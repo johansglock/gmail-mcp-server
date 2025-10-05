@@ -48,6 +48,7 @@ When you first run the server, it will open your browser for authorization. The 
 #### What This Server Actualy Implements:
 - ✅ **Search and read emails** - Full search capabilities
 - ✅ **Extract attachment text** - Safe PDF/DOCX/TXT text extraction
+- ✅ **Download attachments** - Download any attachment to local file (no context usage)
 - ✅ **Create/update drafts** - Smart draft management with thread awareness
 - ❌ **Send emails** - Server doesn't implement sending (though permission is granted)
 - ❌ **Delete emails** - Server doesn't implement deletion
@@ -143,6 +144,7 @@ You can edit these config files directly if you know where to find them:
 - `search_threads` - Search Gmail with queries like "from:email@example.com" or "subject:meeting" (includes draft info)
 - `create_draft` - Create email drafts or update existing drafts (AI will request style guide first)
 - `extract_attachment_by_filename` - Safely extract text from PDF, DOCX, and TXT attachments using filename
+- `download_attachment` - Download any email attachment directly to a local file path without loading it into the context window (perfect for large files, images, videos, or any binary attachments)
 - `get_personal_email_style_guide` - Get your email writing style guide (this is a temporary tool, created because most agents do not yet support fetching resources--once agents implement MCP resources better, then thsi tool can be removed)
 
 **Resources:**
@@ -151,6 +153,40 @@ You can edit these config files directly if you know where to find them:
 **Prompts:**
 - `/generate-email-tone` - Analyze your sent emails to create personalized writing style
 - `/server-status` - Show file locations and server status
+
+### Tool Usage Examples
+
+#### Download Attachments
+Use `download_attachment` to save email attachments to disk without loading them into the context window:
+
+```
+Parameters:
+- message_id: "abc123def456" (from search_threads results)
+- filename: "invoice.pdf" (exact filename from the email)
+- local_path: "/Users/john/Downloads/invoice.pdf" (where to save)
+
+Returns metadata only:
+{
+  "messageId": "abc123def456",
+  "filename": "invoice.pdf",
+  "mimeType": "application/pdf",
+  "savedTo": "/Users/john/Downloads/invoice.pdf",
+  "fileSize": 524288,
+  "downloadedAt": "2025-10-06T14:30:00Z",
+  "success": true
+}
+```
+
+**When to use:**
+- ✅ Large files (videos, images, archives)
+- ✅ Binary files you want to save locally
+- ✅ Files you'll process with other tools
+- ✅ Saving context window tokens
+
+**When to use `extract_attachment_by_filename` instead:**
+- ✅ Small text files (PDF, DOCX, TXT) you want to analyze
+- ✅ Documents you need to read/search through
+- ✅ Content that should be in the conversation
 
 ## 4. Personal Email Style Guide
 
