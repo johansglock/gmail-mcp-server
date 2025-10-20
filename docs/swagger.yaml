@@ -1,0 +1,135 @@
+basePath: /
+definitions:
+  main.HealthStatus:
+    properties:
+      gmail_authenticated:
+        example: true
+        type: boolean
+      server:
+        example: Gmail MCP Server
+        type: string
+      status:
+        example: healthy
+        type: string
+      timestamp:
+        example: "2025-10-18T12:00:00Z"
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  main.MCPResponse:
+    properties:
+      jsonrpc:
+        example: "2.0"
+        type: string
+      result:
+        additionalProperties: true
+        type: object
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Gmail MCP Server Support
+    url: https://github.com/yourusername/gmail-mcp-server
+  description: HTTP API for Gmail MCP Server with tools for email management, drafts,
+    and attachments
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Gmail MCP Server API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Returns HTML page with server information, configuration, and available
+        tools
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page with server information
+          schema:
+            type: string
+      summary: Server Information Page
+      tags:
+      - info
+  /health:
+    get:
+      description: Returns server health status and metadata
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HealthStatus'
+      summary: Health Check
+      tags:
+      - monitoring
+  /mcp:
+    get:
+      consumes:
+      - application/json
+      description: Experimental MCP JSON-RPC endpoint for tool execution. For full
+        MCP support, use stdio mode.
+      parameters:
+      - description: JSON-RPC request (optional for GET)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.MCPResponse'
+      summary: MCP JSON-RPC Endpoint
+      tags:
+      - mcp
+    options:
+      consumes:
+      - application/json
+      description: Experimental MCP JSON-RPC endpoint for tool execution. For full
+        MCP support, use stdio mode.
+      parameters:
+      - description: JSON-RPC request (optional for GET)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.MCPResponse'
+      summary: MCP JSON-RPC Endpoint
+      tags:
+      - mcp
+    post:
+      consumes:
+      - application/json
+      description: Experimental MCP JSON-RPC endpoint for tool execution. For full
+        MCP support, use stdio mode.
+      parameters:
+      - description: JSON-RPC request (optional for GET)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.MCPResponse'
+      summary: MCP JSON-RPC Endpoint
+      tags:
+      - mcp
+swagger: "2.0"
