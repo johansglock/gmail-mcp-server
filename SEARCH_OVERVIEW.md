@@ -21,35 +21,29 @@ For each matching thread, returns only:
 - `query` (required): Gmail search query using standard Gmail search operators
 - `max_results` (optional): Maximum number of threads to return (default: 10)
 
-## Comparison with `search_threads`
+## What It Returns
 
-| Feature | `search_overview` | `search_threads` |
-|---------|-------------------|------------------|
-| Thread ID | ✅ | ✅ |
-| Subject | ✅ | ✅ |
-| Last Message ID | ✅ | ❌ |
-| Last Message Date/Time | ✅ | ❌ |
-| Sender (From) | ❌ | ✅ |
-| Snippet | ❌ | ✅ |
-| Message Count | ❌ | ✅ |
-| Attachments | ❌ | ✅ |
-| Drafts | ❌ | ✅ |
-| Context Usage | Minimal | Higher |
-| Performance | Faster | Slower |
+`search_overview` returns lightweight metadata for each thread:
+
+| Field | Description |
+|-------|-------------|
+| Thread ID | Gmail thread identifier |
+| Subject | Email subject line |
+| Last Message ID | ID of the most recent message |
+| Last Message Date/Time | When the last message was sent (RFC3339) |
 
 ## When to Use
 
 **Use `search_overview` when:**
-- You want to quickly see what emails exist
-- You need to browse many emails efficiently
-- You only need basic metadata to decide which emails to investigate further
-- You want to minimize context token usage
+- Finding emails by search criteria
+- Browsing many emails efficiently
+- Getting thread IDs for further investigation
+- Minimizing context token usage (~100-500 tokens)
+- Identifying which threads to read with `get_thread_messages`
 
-**Use `search_threads` when:**
-- You need to see email snippets/previews
-- You want to know about attachments
-- You need to see existing drafts
-- You want complete thread information
+**For more details, use:**
+- `get_thread_messages` - Read all messages in a thread
+- `get_message` - Read a specific message by ID
 
 ## Example Usage
 

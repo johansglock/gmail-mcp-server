@@ -141,7 +141,9 @@ You can edit these config files directly if you know where to find them:
 ## 3. MCP Tools and Resources
 
 **Tools:**
-- `search_threads` - Search Gmail with queries like "from:email@example.com" or "subject:meeting" (includes draft info)
+- `search_overview` - Search Gmail with queries like "from:email@example.com" or "subject:meeting" (returns thread IDs and basic metadata)
+- `get_thread_messages` - Read all messages in a thread (with configurable detail level)
+- `get_message` - Read a specific message by message ID
 - `create_draft` - Create email drafts or update existing drafts (AI will request style guide first)
 - `extract_attachment_by_filename` - Safely extract text from PDF, DOCX, and TXT attachments using filename
 - `download_attachment` - Download any email attachment directly to a local file path without loading it into the context window (perfect for large files, images, videos, or any binary attachments)
@@ -161,7 +163,7 @@ Use `download_attachment` to save email attachments to disk without loading them
 
 ```
 Parameters:
-- message_id: "abc123def456" (from search_threads results)
+- message_id: "abc123def456" (from search_overview or get_thread_messages results)
 - filename: "invoice.pdf" (exact filename from the email)
 - local_path: "/Users/john/Downloads/invoice.pdf" (where to save)
 

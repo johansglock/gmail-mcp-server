@@ -1210,8 +1210,7 @@ func serverInfoHandler(port string) http.HandlerFunc {
 <p><em>Copy the above configuration to your Cursor MCP settings.</em></p>
 <h2>Available Tools:</h2>
 <ul>
-<li><strong>search_overview</strong> - Search Gmail and return lightweight overview (thread ID, last message ID, date/time, subject) - perfect for browsing without loading full content</li>
-<li><strong>search_threads</strong> - Search Gmail with powerful query syntax (e.g., "from:sender@example.com", "has:attachment")</li>
+<li><strong>search_overview</strong> - Search Gmail with powerful query syntax (e.g., "from:sender@example.com", "has:attachment") - returns lightweight overview (thread ID, last message ID, date/time, subject)</li>
 <li><strong>create_draft</strong> - Create/update email drafts with thread awareness</li>
 <li><strong>extract_attachment_by_filename</strong> - Extract text content from PDF/DOCX/TXT attachments (loads into context)</li>
 <li><strong>download_attachment</strong> - Download any attachment directly to local file path without loading into context
@@ -1462,7 +1461,7 @@ func main() {
 			toneExists = "✅ Found"
 		}
 
-		statusMessage := fmt.Sprintf("📊 **Gmail MCP Server Status**\n\n📁 **App Data Directory:** %s\n\n🔑 **Token File:** %s\n   Status: %s\n\n📝 **Style Guide File:** %s\n   Status: %s\n\n🛠️ **Available Tools:**\n- search_overview - Search Gmail (lightweight: thread ID, last message ID, date/time, subject)\n- search_threads - Search Gmail (includes drafts, snippets, attachments)\n- create_draft - Create/update email drafts\n- extract_attachment_by_filename - Extract text from attachments (loads into context)\n- download_attachment - Download attachments to disk (no context usage)\n- fetch_email_bodies - Get full email content\n- get_personal_email_style_guide - Get writing style\n- list_labels - List all available Gmail labels/tags\n- add_label - Add a label/tag to an email or thread\n- remove_label - Remove a label/tag from an email or thread\n- create_label - Create a new custom Gmail label/tag\n- archive_email - Archive emails (remove from inbox, keep in All Mail)\n- get_message - Get full content of a specific message by message ID\n- get_thread_messages - Get all messages in a thread with full content\n\n📚 **Resources:**\n- file://personal-email-style-guide - Your email writing style\n\n⚡ **Prompts:**\n- /generate-email-tone - Create personalized style guide\n- /server-status - Show this status",
+		statusMessage := fmt.Sprintf("📊 **Gmail MCP Server Status**\n\n📁 **App Data Directory:** %s\n\n🔑 **Token File:** %s\n   Status: %s\n\n📝 **Style Guide File:** %s\n   Status: %s\n\n🛠️ **Available Tools:**\n- search_overview - Search Gmail (returns thread ID, last message ID, date/time, subject)\n- create_draft - Create/update email drafts\n- extract_attachment_by_filename - Extract text from attachments (loads into context)\n- download_attachment - Download attachments to disk (no context usage)\n- fetch_email_bodies - Get full email content\n- get_personal_email_style_guide - Get writing style\n- list_labels - List all available Gmail labels/tags\n- add_label - Add a label/tag to an email or thread\n- remove_label - Remove a label/tag from an email or thread\n- create_label - Create a new custom Gmail label/tag\n- archive_email - Archive emails (remove from inbox, keep in All Mail)\n- get_message - Get full content of a specific message by message ID\n- get_thread_messages - Get all messages in a thread with full content\n\n📚 **Resources:**\n- file://personal-email-style-guide - Your email writing style\n\n⚡ **Prompts:**\n- /generate-email-tone - Create personalized style guide\n- /server-status - Show this status",
 			getAppDataDir(), tokenPath, tokenExists, tonePath, toneExists)
 
 		return &mcp.GetPromptResult{
@@ -1481,7 +1480,7 @@ func main() {
 Returns: thread ID, last message ID, last message date/time, and subject.
 
 This is perfect for quickly browsing many emails without loading full content into context.
-Use this instead of search_threads when you only need to see what emails exist.
+Use this for finding emails efficiently - it returns only essential metadata.
 
 GMAIL SEARCH OPERATORS:
 Basic Filters:
@@ -1558,87 +1557,6 @@ EXAMPLE QUERIES:
 		}
 
 		return gmailServer.SearchOverview(ctx, query, maxResults)
-	})
-
-	// Add Search Threads tool
-	searchThreadsTool := mcp.NewTool("search_threads",
-		mcp.WithDescription(`Search Gmail threads using Gmail's powerful query syntax.
-
-GMAIL SEARCH OPERATORS:
-Basic Filters:
-  from:amy@example.com           - Find emails from specific sender
-  to:me                          - Find emails sent to specific recipient  
-  cc:john@example.com            - Find emails with specific CC
-  subject:"quarterly review"     - Find emails with specific subject text
-  
-Date/Time Filters:
-  after:2025/06/01               - Emails after specific date
-  before:2025/06/07              - Emails before specific date  
-  older_than:7d                  - Older than 7 days (use d/m/y)
-  newer_than:2m                  - Newer than 2 months
-  
-Content & Attachments:
-  has:attachment                 - Has any attachment
-  filename:pdf                   - Has PDF attachment
-  filename:report.txt            - Has specific filename
-  has:youtube                    - Contains YouTube videos
-  has:drive                      - Contains Google Drive files
-  
-Labels & Categories:
-  label:important                - Has specific label
-  category:promotions            - In specific category
-  is:unread                      - Unread messages
-  is:starred                     - Starred messages
-  is:important                   - Marked important
-  in:sent                        - In sent folder
-  in:trash                       - In trash
-  in:anywhere                    - Search everywhere including spam/trash
-  
-Advanced Operators:
-  "exact phrase"                 - Search for exact phrase
-  (dinner movie)                 - Group terms together
-  holiday AROUND 10 vacation     - Words within 10 words of each other
-  from:amy OR from:bob           - Either condition (use OR or { })
-  from:amy AND to:david          - Both conditions
-  dinner -movie                  - Include dinner, exclude movie
-  +unicorn                       - Match word exactly
-  
-Size & Technical:
-  larger:10M                     - Larger than 10MB
-  smaller:1M                     - Smaller than 1MB
-  rfc822msgid:<id@example.com>   - Specific message ID
-  list:info@example.com          - From mailing list
-  deliveredto:user@example.com   - Delivered to specific address
-
-EXAMPLE QUERIES:
-  "is:unread"                    - All unread emails
-  "from:support@github.com"      - All emails from GitHub
-  "subject:invoice older_than:30d" - Old invoices
-  "has:attachment filename:pdf"  - PDF attachments
-  "from:boss@company.com is:unread" - Unread emails from boss
-  "(urgent OR important) newer_than:1d" - Recent urgent/important emails`),
-		mcp.WithString("query",
-			mcp.Required(),
-			mcp.Description("Gmail search query using the operators above (e.g., 'from:example@gmail.com', 'subject:meeting', 'is:unread')"),
-		),
-		mcp.WithNumber("max_results",
-			mcp.Description("Maximum number of threads to return (default: 10)"),
-		),
-	)
-
-	mcpServer.AddTool(searchThreadsTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		query, err := req.RequireString("query")
-		if err != nil {
-			return mcp.NewToolResultError("query parameter is required and must be a string"), nil
-		}
-
-		maxResults := int64(10)
-		args := req.GetArguments()
-		if mr, ok := args["max_results"].(float64); ok {
-			maxResults = int64(mr)
-		}
-
-		return gmailServer.SearchThreads(ctx, query, maxResults)
 	})
 
 	// Add Create Draft tool
@@ -1718,10 +1636,10 @@ EXAMPLE QUERIES:
 
 	// Add Extract Attachment By Filename tool - more reliable than attachment ID
 	extractByFilenameTool := mcp.NewTool("extract_attachment_by_filename",
-		mcp.WithDescription("Safely extract text content from email attachments by filename (do not use attachment-id). Supports PDF, DOCX, and TXT files. Loads content into context for analysis/reading. Use search_threads first to find emails with attachments, then use this tool to extract readable text from specific files by name. For large files or binary attachments (images, videos) that you want to save without loading into context, use download_attachment instead."),
+		mcp.WithDescription("Safely extract text content from email attachments by filename (do not use attachment-id). Supports PDF, DOCX, and TXT files. Loads content into context for analysis/reading. Use search_overview or get_thread_messages first to find emails with attachments, then use this tool to extract readable text from specific files by name. For large files or binary attachments (images, videos) that you want to save without loading into context, use download_attachment instead."),
 		mcp.WithString("message_id",
 			mcp.Required(),
-			mcp.Description("The Gmail message ID containing the attachment (from search_threads results)"),
+			mcp.Description("The Gmail message ID containing the attachment (from search_overview or get_thread_messages results)"),
 		),
 		mcp.WithString("filename",
 			mcp.Required(),
@@ -1748,7 +1666,7 @@ EXAMPLE QUERIES:
 		mcp.WithDescription("Download an email attachment directly to a local file path without loading it into the context window. Perfect for large files (images, videos, archives), binary attachments, or when you want to save files for later use without consuming context tokens. Returns only metadata (file path, size, MIME type, timestamp) instead of content. Use extract_attachment_by_filename instead if you need to read/analyze text content (PDF, DOCX, TXT)."),
 		mcp.WithString("message_id",
 			mcp.Required(),
-			mcp.Description("The Gmail message ID containing the attachment (from search_threads results)"),
+			mcp.Description("The Gmail message ID containing the attachment (from search_overview or get_thread_messages results)"),
 		),
 		mcp.WithString("filename",
 			mcp.Required(),

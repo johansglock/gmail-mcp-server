@@ -19,8 +19,7 @@ Two new tools have been added:
 
 | Tool | Purpose | Returns | Best For |
 |------|---------|---------|----------|
-| `search_overview` | Find emails | Thread ID, subject, date | Quick browsing |
-| `search_threads` | Find emails | Snippets, attachments, drafts | Detailed search |
+| `search_overview` | Find emails | Thread ID, subject, date, last message ID | Quick browsing |
 | `fetch_email_bodies` | Get thread content | First message only | Legacy support |
 | **`get_message`** | Read one message | Full message content | Reading specific replies |
 | **`get_thread_messages`** | Read all messages | All messages in thread | Reading conversations |
@@ -266,10 +265,13 @@ get_message(message3Id)
 
 ```javascript
 // 1. Search for thread
-search_threads("subject:meeting")
-// Result includes messageId for each message
+search_overview("subject:meeting")
+// Get the thread ID
 
-// 2. Read specific message by its ID
+// 2. Get thread messages to see all message IDs
+get_thread_messages(threadId, {summary_only: true})
+
+// 3. Read specific message by its ID
 get_message(specificMessageId)
 ```
 
